@@ -216,11 +216,11 @@ def get_puppy():
 random_puppy = pn.pane.HTML(object="""<img style="margin-left:auto; margin-right:auto; display:block;" id="puppy" height=250 src=""/>""", 
                             sizing_mode="stretch_width")
 
-price_retriever = pn.widgets.FloatInput(name="Price for Golden Retrievers:", start=0.0, placeholder="Enter a number")
-price_shepherd = pn.widgets.FloatInput(name="Price for German Shepherds:", start=0.0, placeholder="Enter a number")
-price_chihuahua = pn.widgets.FloatInput(name="Price for Chihuahuas:", start=0.0, placeholder="Enter a number")
-price_kitten = pn.widgets.FloatInput(name="Price for kittens:", start=0.0, placeholder="Enter a number")
-price_goldfish = pn.widgets.FloatInput(name="Price for goldfish:", start=0.0, placeholder="Enter a number")
+price_retriever = pn.widgets.FloatInput(name="Price for Golden Retrievers:", start=0.0, end=1000, placeholder="Enter a number")
+price_shepherd = pn.widgets.FloatInput(name="Price for German Shepherds:", start=0.0, end=1000, placeholder="Enter a number")
+price_chihuahua = pn.widgets.FloatInput(name="Price for Chihuahuas:", start=0.0, end=1000, placeholder="Enter a number")
+price_kitten = pn.widgets.FloatInput(name="Price for kittens:", start=0.0, end=1000, placeholder="Enter a number")
+price_goldfish = pn.widgets.FloatInput(name="Price for goldfish:", start=0.0, end=1000, placeholder="Enter a number")
 button = pn.widgets.Button(name="Get weekly profit!", button_type="primary", sizing_mode="stretch_width")
 
 
