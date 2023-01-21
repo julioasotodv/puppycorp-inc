@@ -47,267 +47,60 @@ from panel.io.pyodide import init_doc, write_doc
 
 init_doc()
 
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-import numpy as np
-import pandas as pd
-import panel as pn
-from urllib.request import urlopen, Request
-import json
-import time
-import requests
-
-pn.extension(raw_css=["""body{overflow-x: hidden;}"""])
-
-
-# In[2]:
-
-
-def sigmoid(x, cap, midpoint, rate):
-    return cap / (1+np.exp(-rate * (x-midpoint)))
-
-def retriever_sales(retriever_price, shepherd_price, chihuahua_price, cat_price, goldfish_price):
-    retriever_price = np.maximum(np.array(retriever_price),0)
-    shepherd_price = np.maximum(np.array(shepherd_price),0)
-    chihuahua_price = np.maximum(np.array(chihuahua_price),0)
-    cat_price = np.maximum(np.array(cat_price),0)
-    goldfish_price = np.maximum(np.array(goldfish_price),0)
-    
-    interaction_shepherd = 0.8 + sigmoid(shepherd_price, 0.4, 560, 0.03)
-    interaction_chihuahua = 0.9 + sigmoid(chihuahua_price, 0.2, 324, 0.01)
-    interaction_cat = 0.83 + sigmoid(cat_price, 0.45, 190, 0.03)
-    interacion_goldfish = 1
-    res = (sigmoid(retriever_price, 20_000, 450, -0.01) * 
-           interaction_shepherd * 
-           interaction_chihuahua * 
-           interaction_cat *
-           interacion_goldfish)
-    noise=0
-    res += noise
-    return np.round(np.maximum(res, 0))
-
-def shepherd_sales(retriever_price, shepherd_price, chihuahua_price, cat_price, goldfish_price):
-    retriever_price = np.maximum(np.array(retriever_price),0)
-    shepherd_price = np.maximum(np.array(shepherd_price),0)
-    chihuahua_price = np.maximum(np.array(chihuahua_price),0)
-    cat_price = np.maximum(np.array(cat_price),0)
-    goldfish_price = np.maximum(np.array(goldfish_price),0)
-    
-    interaction_retriever = 0.6 + sigmoid(retriever_price, 0.8, 480, 0.01)
-    interaction_chihuahua = 0.85 + sigmoid(chihuahua_price, 0.3, 311, 0.02)
-    interaction_cat = 0.9 + sigmoid(cat_price, 0.2, 211, 0.01)
-    interacion_goldfish = 1
-    res = (sigmoid(shepherd_price, 14_000, 520, -0.007) * 
-           interaction_retriever * 
-           interaction_chihuahua * 
-           interaction_cat *
-           interacion_goldfish)
-    noise=0
-    res += noise
-    return np.round(np.maximum(res, 0))
-
-def chihuahua_sales(retriever_price, shepherd_price, chihuahua_price, cat_price, goldfish_price):
-    retriever_price = np.maximum(np.array(retriever_price),0)
-    shepherd_price = np.maximum(np.array(shepherd_price),0)
-    chihuahua_price = np.maximum(np.array(chihuahua_price),0)
-    cat_price = np.maximum(np.array(cat_price),0)
-    goldfish_price = np.maximum(np.array(goldfish_price),0)
-    
-    interaction_retriever = 0.9 + sigmoid(retriever_price, 0.2, 420, 0.01)
-    interaction_shepherd = 0.85 + sigmoid(shepherd_price, 0.15, 540, 0.005)
-    interaction_cat = 0.9 + sigmoid(cat_price, 0.35, 210, 0.02)
-    interacion_goldfish = 1
-    res = (sigmoid(chihuahua_price, 8600, 324, -0.024) * 
-           interaction_retriever * 
-           interaction_shepherd * 
-           interaction_cat *
-           interacion_goldfish)
-    noise=0
-    res += noise
-    return np.round(np.maximum(res, 0))
-
-def cat_sales(retriever_price, shepherd_price, chihuahua_price, cat_price, goldfish_price):
-    retriever_price = np.maximum(np.array(retriever_price),0)
-    shepherd_price = np.maximum(np.array(shepherd_price),0)
-    chihuahua_price = np.maximum(np.array(chihuahua_price),0)
-    cat_price = np.maximum(np.array(cat_price),0)
-    goldfish_price = np.maximum(np.array(goldfish_price),0)
-    
-    interaction_retriever = 0.9 + sigmoid(retriever_price, 0.2, 437, 0.05)
-    interaction_shepherd = 0.95 + sigmoid(shepherd_price, 0.1, 543, 0.01)
-    interaction_chihuahua = 1
-    interacion_goldfish = 1
-    res = (sigmoid(cat_price, 17000, 237, -0.008) * 
-           interaction_retriever * 
-           interaction_shepherd * 
-           interaction_chihuahua *
-           interacion_goldfish)
-    noise=0
-    res += noise
-    return np.round(np.maximum(res, 0))
-
-def goldfish_sales(retriever_price, shepherd_price, chihuahua_price, cat_price, goldfish_price):
-    retriever_price = np.maximum(np.array(retriever_price),0)
-    shepherd_price = np.maximum(np.array(shepherd_price),0)
-    chihuahua_price = np.maximum(np.array(chihuahua_price),0)
-    cat_price = np.maximum(np.array(cat_price),0)
-    goldfish_price = np.maximum(np.array(goldfish_price),0)
-    
-    interaction_retriever = 1
-    interaction_shepherd = 1
-    interaction_chihuahua = 0.95 + sigmoid(chihuahua_price, 0.1, 338, 0.01)
-    interaction_cat = 0.8 + sigmoid(cat_price, 0.35, 220, 0.02)
-    res = (sigmoid(goldfish_price, 37000, 24, -0.1) * 
-           interaction_retriever * 
-           interaction_shepherd * 
-           interaction_chihuahua *
-           interaction_cat)
-    noise=0
-    res += noise
-    return np.round(np.maximum(res, 0))
-
-def cost_structure(sales_array):
-    office_costs = 30_000
-    
-    retriever_costs = 141 * sales_array[...,0]
-    retriever_ship = 700_000 * np.minimum(sales_array[...,0], 1)
-    
-    shepherd_costs = 176 * sales_array[...,1]
-    shepherd_ship = 620_000 * np.minimum(sales_array[...,1], 1)
-    
-    chihuahua_costs = 52 * sales_array[...,2]
-    chihuahua_ship = 960_000 * np.minimum(sales_array[...,2], 1)
-    
-    kitty_costs = 125 * sales_array[...,3]
-    kitty_ship = 350_000 * np.minimum(sales_array[...,3], 1)
-    
-    goldfish_costs = 3 * sales_array[...,4]
-    goldfish_ship = 7_000 * np.minimum(sales_array[...,4], 1)
-    
-    return (office_costs + 
-            retriever_costs + retriever_ship +
-            shepherd_costs + shepherd_ship +
-            chihuahua_costs + chihuahua_ship + 
-            kitty_costs + kitty_ship + 
-            goldfish_costs + goldfish_ship)
-
-
-# In[3]:
-
-
-def get_puppy():
-    puppy_url = requests.get("http://dog.ceo/api/breeds/image/random", verify=False, headers={'Origin': "http://dog.ceo"}).json()["message"]
-
-    #user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
-    #headers = {'User-Agent': user_agent} 
-
-    #request = Request(puppy_url,data=None,headers=headers)
-    #puppy_image = urlopen(request).read()
-    return """<img height=250 src="%s"/>""" % puppy_url
-
-
-# In[4]:
-
-
-random_puppy = pn.pane.HTML(object="""<img style="margin-left:auto; margin-right:auto; display:block;" id="puppy" height=250 src=""/>""", 
-                            sizing_mode="stretch_width")
-
-price_retriever = pn.widgets.FloatInput(name="Price for Golden Retrievers:", start=0.0, end=1000, placeholder="Enter a number")
-price_shepherd = pn.widgets.FloatInput(name="Price for German Shepherds:", start=0.0, end=1000, placeholder="Enter a number")
-price_chihuahua = pn.widgets.FloatInput(name="Price for Chihuahuas:", start=0.0, end=1000, placeholder="Enter a number")
-price_kitten = pn.widgets.FloatInput(name="Price for kittens:", start=0.0, end=1000, placeholder="Enter a number")
-price_goldfish = pn.widgets.FloatInput(name="Price for goldfish:", start=0.0, end=1000, placeholder="Enter a number")
-button = pn.widgets.Button(name="Get weekly profit!", button_type="primary", sizing_mode="stretch_width")
-
-
-button_group = pn.WidgetBox(pn.Row(price_retriever, price_shepherd), 
-                            pn.Row(price_chihuahua, price_kitten),
-                            pn.Row(price_goldfish),
-                            pn.Row(button, sizing_mode="stretch_width", margin=(10, 0)),)
-
-answer = pn.pane.Markdown("", align="center")
-
-
-# In[27]:
-
-
-dash = pn.Row(pn.layout.HSpacer(),pn.Column(pn.pane.Markdown("# PuppyCORP INC tester!", align="center"), 
-                        random_puppy, 
-                        button_group, 
-                        answer,
-                        pn.pane.HTML(object="""<script>
-var req = new XMLHttpRequest();
-req.responseType = 'json';
-req.onreadystatechange = function() {
-    if (req.readyState === 4){
-        document.getElementById('puppy').src = req.response.message;
-        }
-    };
-    req.open('GET', 'https://dog.ceo/api/breeds/image/random');
-    req.send();
-</script>""", align="center")), 
-             pn.layout.HSpacer()
-                        )
-
-
-# In[28]:
-
-
-def compute(n_clicks):
-    button_group.loading = True
-    prices = np.array([price_retriever.value, price_shepherd.value, price_chihuahua.value,
-                       price_kitten.value, price_goldfish.value])
-    unit_sales = np.array([retriever_sales(*prices),
-                           shepherd_sales(*prices),
-                           chihuahua_sales(*prices),
-                           cat_sales(*prices),
-                           goldfish_sales(*prices)])
-    revenue = (unit_sales * prices).sum()
-    costs = cost_structure(unit_sales)
-    profit = revenue - costs
-    #new_puppy = get_puppy()
-    for i in range(99999999*2):
-        a = i
-    if answer.disable_math:
-        answer.disable_math=False
-    else:
-        answer.disable_math=True
-    #random_puppy.object = new_puppy
-    answer.object = f"## You got a weekly profit of \`{profit:,.2f}€\`!"
-    button_group.loading = False
-
-
-# In[29]:
-
-
-button.on_click(compute)
-
-
-answer.jscallback(disable_math="""
-var req = new XMLHttpRequest();
-req.responseType = 'json';
-req.onreadystatechange = function() {
-    if (req.readyState === 4){
-        document.getElementById('puppy').src = req.response.message;
-        }
-    };
-    req.open('GET', 'https://dog.ceo/api/breeds/image/random');
-    req.send();
-""", args=dict())
-
-# In[30]:
-
-
-dash.servable()
-
-
-
-
-
+U='amazing_score'
+T='great_score'
+S='stretch_width'
+K='center'
+J='newpuppy'
+H='Enter a number'
+F=0.0
+D=False
+import numpy as A,pandas as f,panel as B
+from urllib.request import urlopen,Request
+import json,time,requests as V
+B.extension(raw_css=['body{overflow-x: hidden;}'],js_files={'conf':'https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js'})
+def C(x,cap,midpoint,rate):return cap/(1+A.exp(-rate*(x-midpoint)))
+def W(retriever_price,shepherd_price,chihuahua_price,cat_price,goldfish_price):G=goldfish_price;F=cat_price;E=chihuahua_price;D=shepherd_price;B=retriever_price;B=A.maximum(A.array(B),0);D=A.maximum(A.array(D),0);E=A.maximum(A.array(E),0);F=A.maximum(A.array(F),0);G=A.maximum(A.array(G),0);I=0.8+C(D,0.4,560,0.03);J=0.9+C(E,0.2,324,0.01);K=0.83+C(F,0.45,190,0.03);L=1;H=C(B,20000,450,-0.01)*I*J*K*L;M=0;H+=M;return A.round(A.maximum(H,0))
+def X(retriever_price,shepherd_price,chihuahua_price,cat_price,goldfish_price):G=goldfish_price;F=cat_price;E=chihuahua_price;D=shepherd_price;B=retriever_price;B=A.maximum(A.array(B),0);D=A.maximum(A.array(D),0);E=A.maximum(A.array(E),0);F=A.maximum(A.array(F),0);G=A.maximum(A.array(G),0);I=0.6+C(B,0.8,480,0.01);J=0.85+C(E,0.3,311,0.02);K=0.9+C(F,0.2,211,0.01);L=1;H=C(D,14000,520,-0.007)*I*J*K*L;M=0;H+=M;return A.round(A.maximum(H,0))
+def Y(retriever_price,shepherd_price,chihuahua_price,cat_price,goldfish_price):G=goldfish_price;F=cat_price;E=chihuahua_price;D=shepherd_price;B=retriever_price;B=A.maximum(A.array(B),0);D=A.maximum(A.array(D),0);E=A.maximum(A.array(E),0);F=A.maximum(A.array(F),0);G=A.maximum(A.array(G),0);I=0.9+C(B,0.2,420,0.01);J=0.85+C(D,0.15,540,0.005);K=0.9+C(F,0.35,210,0.02);L=1;H=C(E,8600,324,-0.024)*I*J*K*L;M=0;H+=M;return A.round(A.maximum(H,0))
+def Z(retriever_price,shepherd_price,chihuahua_price,cat_price,goldfish_price):G=goldfish_price;F=chihuahua_price;E=cat_price;D=shepherd_price;B=retriever_price;B=A.maximum(A.array(B),0);D=A.maximum(A.array(D),0);F=A.maximum(A.array(F),0);E=A.maximum(A.array(E),0);G=A.maximum(A.array(G),0);I=0.9+C(B,0.2,437,0.05);J=0.95+C(D,0.1,543,0.01);K=1;L=1;H=C(E,17000,237,-0.008)*I*J*K*L;M=0;H+=M;return A.round(A.maximum(H,0))
+def a(retriever_price,shepherd_price,chihuahua_price,cat_price,goldfish_price):G=shepherd_price;F=retriever_price;E=goldfish_price;D=cat_price;B=chihuahua_price;F=A.maximum(A.array(F),0);G=A.maximum(A.array(G),0);B=A.maximum(A.array(B),0);D=A.maximum(A.array(D),0);E=A.maximum(A.array(E),0);I=1;J=1;K=0.95+C(B,0.1,338,0.01);L=0.8+C(D,0.35,220,0.02);H=C(E,37000,24,-0.1)*I*J*K*L;M=0;H+=M;return A.round(A.maximum(H,0))
+def b(sales_array):B=sales_array;C=30000;D=141*B[(...,0)];E=700000*A.minimum(B[(...,0)],1);F=176*B[(...,1)];G=620000*A.minimum(B[(...,1)],1);H=52*B[(...,2)];I=960000*A.minimum(B[(...,2)],1);J=125*B[(...,3)];K=350000*A.minimum(B[(...,3)],1);L=3*B[(...,4)];M=7000*A.minimum(B[(...,4)],1);return C+D+E+F+G+H+I+J+K+L+M
+def g():A=V.get('http://dog.ceo/api/breeds/image/random',verify=D,headers={'Origin':'http://dog.ceo'}).json()['message'];return'<img height=250 src="%s"/>'%A
+c=B.pane.HTML(object='<img style="margin-left:auto; margin-right:auto; display:block;" id="puppy" height=250 src=""/>',sizing_mode=S)
+L=B.widgets.FloatInput(name='Price for Golden Retrievers:',start=F,end=1000,placeholder=H)
+M=B.widgets.FloatInput(name='Price for German Shepherds:',start=F,end=1000,placeholder=H)
+N=B.widgets.FloatInput(name='Price for Chihuahuas:',start=F,end=1000,placeholder=H)
+O=B.widgets.FloatInput(name='Price for kittens:',start=F,end=1000,placeholder=H)
+P=B.widgets.FloatInput(name='Price for goldfish:',start=F,end=1000,placeholder=H)
+Q=B.widgets.Button(name='Get weekly profit!',button_type='primary',sizing_mode=S)
+G=B.pane.JSON(object={J:D,T:D,U:D},visible=D)
+h=B.widgets.Spinner(value=0,width=75)
+I=B.WidgetBox(B.Row(L,M),B.Row(N,O),B.Row(P),B.Row(Q,sizing_mode=S,margin=(10,0)))
+R=B.pane.Markdown('',align=K)
+E=B.pane.HTML(object='',align=K)
+d=B.Row(B.layout.HSpacer(),B.Column(B.pane.HTML('<h1 style="margin-bottom: 0">PuppyCORP INC tester!</h1>',align=K),c,I,R,E,G,B.pane.HTML(object="<script>\\nvar req = new XMLHttpRequest();\\nreq.responseType = 'json';\\nreq.onreadystatechange = function() {\\n    if (req.readyState === 4){\\n        document.getElementById('puppy').src = req.response.message;\\n        }\\n    };\\n    req.open('GET', 'https://dog.ceo/api/breeds/image/random');\\n    req.send();\\n</script>",align=K)),B.layout.HSpacer())
+def e(n_clicks):
+	H=True;I.loading=H;F=A.array([L.value,M.value,N.value,O.value,P.value]);K=A.array([W(*F),X(*F),Y(*F),Z(*F),a(*F)]);Q=(K*F).sum();S=b(K);C=Q-S
+	for V in range(99999999*2):c=V
+	B={**G.object}
+	if C>6950000:B[U]=H
+	else:B[U]=D
+	if C>6750000:B[T]=H
+	else:B[T]=D
+	if B[J]:B[J]=D;G.object=B
+	else:B[J]=H;G.object=B
+	R.object=f"## You got a weekly profit of \`{C:,.2f}€\`!"
+	if C<=0:E.object='<p style="margin-top:0">Try again &#128579;</p>'
+	elif C<=6081020:E.object='<p style="margin-top:0; font-size: 1.25em">Keep on trying! &#128054;</p>'
+	elif C<=6500000:E.object='<p style="margin-top:0; font-size: 1.5em">Not bad! &#128522;</p>'
+	elif C<=6750000:E.object="""<p style="margin-top:0; font-size: 1.75em">That's pretty good! &#128515;</p>"""
+	elif C<=6950000:E.object='<p style="margin-top:0; font-size: 1.75em">Great job! &#128526;</p>'
+	else:E.object="""<p style="margin-top:0; font-size: 2em">Amazing result! It doesn't get much better than this &#129321;</p>"""
+	I.loading=D
+Q.on_click(e)
+G.jscallback(object="\\nvar req = new XMLHttpRequest();\\nreq.responseType = 'json';\\nreq.onreadystatechange = function() {\\n    if (req.readyState === 4){\\n        document.getElementById('puppy').src = req.response.message;\\n        }\\n    };\\nreq.open('GET', 'https://dog.ceo/api/breeds/image/random');\\nreq.send();\\nvar frontend_metadata = JSON.parse(cb_obj.text);\\nif (frontend_metadata.amazing_score){\\n    var end = Date.now() + (5 * 1000);\\n\\n    var colors = ['#bb0000', '#4ba0ee'];\\n\\n    (function frame() {\\n      confetti({\\n        particleCount: 2,\\n        angle: 60,\\n        spread: 55,\\n        origin: { x: 0 },\\n        colors: colors\\n      });\\n      confetti({\\n        particleCount: 2,\\n        angle: 120,\\n        spread: 55,\\n        origin: { x: 1 },\\n        colors: colors\\n      });\\n\\n      if (Date.now() < end) {\\n        requestAnimationFrame(frame);\\n      }\\n    }());\\n}\\nelse if (frontend_metadata.great_score){\\n    confetti({particleCount: 100,\\n              spread: 70,\\n              origin: { y: 0.8 }\\n             });\\n};\\n",args=dict())
+d.servable()
 
 await write_doc()
   `
