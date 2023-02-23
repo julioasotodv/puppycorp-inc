@@ -92,9 +92,9 @@ def e(n_clicks):
 	else:B[J]=H;G.object=B
 	R.object=f"## You got a weekly profit of \`{C:,.2f}€\`!"
 	if C<=0:E.object='<p style="margin-top:0">Try again &#128579;</p>'
-	elif C<=6081020:E.object='<p style="margin-top:0; font-size: 1.25em">Keep on trying! &#128054;</p>'
-	elif C<=6500000:E.object='<p style="margin-top:0; font-size: 1.5em">Not bad! &#128522;</p>'
-	elif C<=6750000:E.object="""<p style="margin-top:0; font-size: 1.75em">That's pretty good! &#128515;</p>"""
+	elif C<=6608147:E.object='<p style="margin-top:0; font-size: 1.25em">Keep on trying! &#128054;</p>'
+	elif C<=6700000:E.object='<p style="margin-top:0; font-size: 1.5em">Not bad! &#128522;</p>'
+	elif C<=6800000:E.object="""<p style="margin-top:0; font-size: 1.75em">That's pretty good! &#128515;</p>"""
 	elif C<=6950000:E.object='<p style="margin-top:0; font-size: 1.75em">Great job! &#128526;</p>'
 	else:E.object="""<p style="margin-top:0; font-size: 2em">Amazing result! It doesn't get much better than this &#129321;</p>"""
 	I.loading=D
