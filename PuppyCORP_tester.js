@@ -86,7 +86,7 @@ def e(n_clicks):
 	B={**G.object}
 	if C>6950000:B[U]=H
 	else:B[U]=D
-	if C>6750000:B[T]=H
+	if C>6800000:B[T]=H
 	else:B[T]=D
 	if B[J]:B[J]=D;G.object=B
 	else:B[J]=H;G.object=B
